@@ -418,29 +418,45 @@
         }
         
         async function initScramjetCore(wispUrl) {
-            if (scramjetController && currentScramjetWisp === wispUrl) return; // Prevent re-initializing same server
-            if (typeof window.$scramjetController === 'undefined') return;
+            if (scramjetController && currentScramjetWisp === wispUrl) return; 
             
-            const { Controller } = window.$scramjetController;
-            const { defaultConfig } = window.$scramjet;
-            const EpoxyTransport = self.EpoxyTransport.default;
+            if (typeof window.$scramjetController === 'undefined') {
+                console.error("Scramjet controller script not loaded.");
+                return;
+            }
             
-            await navigator.serviceWorker.ready;
-            const serviceworker = navigator.serviceWorker.controller ?? (await navigator.serviceWorker.ready).active;
-            
-            const transport = new EpoxyTransport({ wisp: wispUrl });
-            await transport.init();
-            
-            scramjetController = new Controller({
-                serviceworker,
-                transport,
-                scramjetConfig: defaultConfig
-            });
-            await scramjetController.wait();
-            currentScramjetWisp = wispUrl;
-            
-            // Clear existing frame bindings because controller has completely restarted
-            scramjetFrames = {};
+            try {
+                const { Controller } = window.$scramjetController;
+                const { defaultConfig } = window.$scramjet;
+                const EpoxyTransport = self.EpoxyTransport?.default || window.EpoxyTransport;
+                
+                const registration = await navigator.serviceWorker.ready;
+                const serviceworker = navigator.serviceWorker.controller || registration.active;
+                
+                if (!serviceworker) {
+                    throw new Error("No active service worker found for Scramjet.");
+                }
+                
+                const transport = new EpoxyTransport({ wisp: wispUrl });
+                await transport.init();
+                
+                scramjetController = new Controller({
+                    serviceworker,
+                    transport,
+                    scramjetConfig: defaultConfig
+                });
+                
+                await scramjetController.wait();
+                currentScramjetWisp = wispUrl;
+                
+                // Clear existing frame bindings because controller has completely restarted
+                scramjetFrames = {};
+            } catch (err) {
+                console.error("Failed to initialize Scramjet:", err);
+                scramjetController = null;
+                currentScramjetWisp = null;
+                throw err;
+            }
         }
 
         async function setupWisp(targetWisp) {
@@ -613,16 +629,24 @@
                     await setupWisp(document.getElementById('wisp-select').value);
                 }
                 
-                if (!scramjetController) {
-                    await initScramjetCore(cachedWisp);
-                }
-                
-                if (!scramjetFrames[tabId] && scramjetController) {
-                    scramjetFrames[tabId] = scramjetController.createFrame(iframe);
-                }
-                
-                if (scramjetFrames[tabId]) {
-                    scramjetFrames[tabId].go(targetUrl);
+                try {
+                    if (!scramjetController || currentScramjetWisp !== cachedWisp) {
+                        await initScramjetCore(cachedWisp);
+                    }
+                    
+                    if (!scramjetFrames[tabId] && scramjetController) {
+                        scramjetFrames[tabId] = scramjetController.createFrame(iframe);
+                    }
+                    
+                    if (scramjetFrames[tabId]) {
+                        scramjetFrames[tabId].go(targetUrl);
+                    }
+                } catch (e) {
+                    loadingSpinner.style.display = 'none';
+                    iframe.classList.remove('loading');
+                    wispStatusEl.innerHTML = `<i data-lucide="alert-triangle" size="16"></i><span>WISP Connection Failed</span>`;
+                    wispStatusEl.style.color = '#ef4444';
+                    lucide.createIcons();
                 }
             } else {
                 const proxiedUrl = await window.__getProxiedUrl(rawUrl);
