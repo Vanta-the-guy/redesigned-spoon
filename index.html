@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!--[cite: 1] -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -421,18 +422,18 @@
             if (typeof window.$scramjetController === 'undefined') return;
             
             const { Controller } = window.$scramjetController;
-            const { defaultConfig } = window.$scramjet;
-            const EpoxyTransport = window.EpoxyTransport?.default || self.EpoxyTransport?.default;
+            const config = window.$scramjet?.defaultConfig || window.__scramjet$config;
+            const EpoxyTransport = window.EpoxyClient || window.EpoxyTransport?.default || self.EpoxyTransport?.default;
             
-            await navigator.serviceWorker.ready;
-            const serviceworker = navigator.serviceWorker.controller ?? (await navigator.serviceWorker.ready).active;
+            const swReg = await navigator.serviceWorker.ready;
+            const serviceworker = navigator.serviceWorker.controller || swReg.active;
             const transport = new EpoxyTransport({ wisp: wispUrl });
             await transport.init();
             
             scramjetController = new Controller({
                 serviceworker,
                 transport,
-                scramjetConfig: defaultConfig
+                scramjetConfig: config
             });
             await scramjetController.wait();
         }
@@ -526,12 +527,15 @@
         window.__getProxiedUrl = async function(rawUrl) {
             if (rawUrl === '/home') return rawUrl;
             const targetUrl = searchUrl(rawUrl);
+            const engine = document.getElementById('engine-select').value;
 
-            if (!cachedWisp || cachedWisp === "wss://theavancehotel.com/fairs/") {
+            if (!cachedWisp || (engine !== 'scramjet' && cachedWisp === "wss://theavancehotel.com/fairs/")) {
                 await setupWisp(document.getElementById('wisp-select').value);
             }
 
-            if (typeof __uv$config !== 'undefined') {
+            if (engine === 'scramjet' && typeof __scramjet$config !== 'undefined') {
+                return __scramjet$config.prefix + __scramjet$config.encodeUrl(targetUrl);
+            } else if (engine === 'uv' && typeof __uv$config !== 'undefined') {
                 return __uv$config.prefix + __uv$config.encodeUrl(targetUrl);
             }
             return targetUrl;
