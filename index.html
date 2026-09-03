@@ -1,262 +1,166 @@
 <!DOCTYPE html>
-<!--[cite: 1] -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Browser</title>
+    <title>Web Proxy Browser</title>
+
+    <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- UV Imports -->
+    <!-- UV Scripts (Modules) -->
     <script src="/active/uv/uv.bundle.js" defer></script>
     <script src="/active/uv/uv.config.js" defer></script>
-    
-    <!-- Scramjet Required Global Imports -->
+
+    <!-- Scramjet Scripts (MUST be classic scripts) -->
     <script src="/scramjet/scramjet.js"></script>
     <script src="/controller/controller.api.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@3.0.1/dist/index.js"></script>
 
     <style>
+        :root {
+            --bg-dark: #0f0f11;
+            --bg-panel: #1a1a1d;
+            --bg-input: #252529;
+            --text-main: #f0f0f0;
+            --text-muted: #888890;
+            --border-color: #2d2d33;
+            --accent: #4f82f2;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
+        
         body, html {
-            width: 100vw;
-            height: 100vh;
-            background-color: #050505;
-            color: #ffffff;
+            width: 100vw; height: 100vh;
+            background-color: var(--bg-dark); color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
-            display: flex;
+            overflow: hidden; display: flex; flex-direction: column;
         }
 
-        /* Sidebar & Slim Mode */
-        .sidebar {
-            width: 260px;
-            background-color: #09090b;
-            border-right: 1px solid #1f1f22;
-            display: flex;
-            flex-direction: column;
-            padding: 12px;
-            flex-shrink: 0;
-            z-index: 10;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow-x: hidden;
+        /* --- Title & Tabs Bar --- */
+        .tabs-container {
+            display: flex; align-items: flex-end; background-color: var(--bg-dark);
+            height: 40px; padding: 0 8px; gap: 4px; border-bottom: 1px solid var(--border-color);
         }
-
-        .sidebar.collapsed {
-            width: 60px;
-            padding: 12px 6px;
+        .tab {
+            display: flex; align-items: center; gap: 8px;
+            height: 32px; padding: 0 12px; min-width: 120px; max-width: 220px;
+            background-color: transparent; color: var(--text-muted);
+            border-radius: 8px 8px 0 0; cursor: pointer;
+            font-size: 12px; border: 1px solid transparent; border-bottom: none;
+            position: relative; transition: background 0.2s;
         }
-
-        .sidebar-header-controls { 
-            display: flex; align-items: center; justify-content: space-between; 
-            margin-bottom: 16px; padding: 0 4px; flex-wrap: wrap; gap: 8px;
+        .tab:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .tab.active {
+            background-color: var(--bg-panel); color: var(--text-main);
+            border-color: var(--border-color); border-bottom: 1px solid var(--bg-panel);
+            margin-bottom: -1px; z-index: 2;
         }
-
-        .sidebar.collapsed .sidebar-header-controls { justify-content: center; }
-        .sidebar.collapsed .nav-group { display: none; }
-        .sidebar.collapsed .sidebar-search { display: none; }
-        .sidebar.collapsed .app-grid { display: none; }
-        .sidebar.collapsed .tab-title { display: none; }
-        .sidebar.collapsed .tab-close { display: none; }
-        .sidebar.collapsed .tab-item { padding: 10px; justify-content: center; }
-
-        .nav-group { display: flex; gap: 4px; color: #a1a1aa; }
-        
-        .icon-btn { 
-            background: transparent; border: none; color: inherit; cursor: pointer; 
-            display: flex; align-items: center; justify-content: center; border-radius: 6px; 
-            padding: 6px; transition: all 0.2s ease; flex-shrink: 0;
-        }
-        .icon-btn:hover { color: #ffffff; background-color: #27272a; }
-        .icon-btn.active { color: #ffffff; background-color: #3f3f46; }
-
-        .sidebar-search {
-            display: flex; align-items: center; background-color: #18181b; border: 1px solid #27272a;
-            border-radius: 8px; padding: 6px 12px; margin-bottom: 16px; gap: 8px; transition: border-color 0.2s ease;
-            flex-shrink: 0;
-        }
-        .sidebar-search:focus-within { border-color: #52525b; }
-        .sidebar-search input { background: transparent; border: none; color: #e4e4e7; font-size: 13px; width: 100%; outline: none; }
-        
-        .sidebar-search .icon-btn { color: #a1a1aa; padding: 4px; margin-right: -6px; }
-        .sidebar-search .icon-btn.starred { color: #fbbf24; }
-        .sidebar-search .icon-btn.starred:hover { color: #f59e0b; }
-
-        .app-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; flex-shrink: 0; }
-        .app-tile {
-            background-color: #18181b; border: 1px solid #27272a; border-radius: 8px; height: 48px;
-            display: flex; align-items: center; justify-content: center; cursor: pointer; color: #e4e4e7;
-            transition: all 0.2s ease; position: relative;
-        }
-        .app-tile:hover { background-color: #27272a; transform: translateY(-1px); }
-        .app-tile img { width: 20px; height: 20px; border-radius: 4px; }
-
-        .tab-list { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; overflow-y: auto; overflow-x: hidden; }
-        .tab-list::-webkit-scrollbar { width: 6px; }
-        .tab-list::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
-        .tab-list::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
-
-        .tab-item {
-            display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px;
-            cursor: pointer; font-size: 13px; color: #a1a1aa; border: 1px solid transparent; transition: all 0.2s ease;
-        }
-        .tab-item:hover { background-color: #18181b; color: #e4e4e7; }
-        .tab-item.active { background-color: #27272a; color: #ffffff; border: 1px solid #3f3f46; }
-        .tab-icon { display: flex; align-items: center; justify-content: center; color: inherit; width: 16px; flex-shrink: 0; }
         .tab-title { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .tab-close { opacity: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 4px; color: #a1a1aa; transition: all 0.2s ease; flex-shrink: 0; }
-        .tab-item:hover .tab-close, .tab-item.active .tab-close { opacity: 1; }
-        .tab-close:hover { background-color: #ef4444; color: #ffffff; }
+        .tab-close {
+            display: flex; align-items: center; justify-content: center;
+            width: 18px; height: 18px; border-radius: 50%; opacity: 0; transition: opacity 0.2s;
+        }
+        .tab:hover .tab-close, .tab.active .tab-close { opacity: 1; }
+        .tab-close:hover { background-color: rgba(255,255,255,0.1); }
+        
+        .new-tab-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 6px; cursor: pointer; color: var(--text-muted);
+            background: transparent; border: none; margin-bottom: 2px;
+        }
+        .new-tab-btn:hover { background-color: rgba(255,255,255,0.05); color: var(--text-main); }
 
-        /* Main Area */
-        .main-area { flex-grow: 1; display: flex; flex-direction: column; background-color: #050505; transition: width 0.3s ease; }
-        .content-area { flex-grow: 1; position: relative; background-color: #000000; }
-        .loading-spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; align-items: center; justify-content: center; z-index: 5; pointer-events: none; color: #a1a1aa; animation: spin 0.8s linear infinite; }
-        @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+        /* --- Navigation Bar --- */
+        .nav-bar {
+            display: flex; align-items: center; gap: 12px;
+            height: 48px; padding: 0 12px; background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color); z-index: 1;
+        }
+        .nav-actions { display: flex; gap: 4px; }
+        .icon-btn {
+            background: transparent; border: none; color: var(--text-main);
+            width: 32px; height: 32px; border-radius: 6px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: background 0.2s;
+        }
+        .icon-btn:hover { background-color: rgba(255,255,255,0.1); }
 
-        iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; display: none; background-color: #09090b; transition: filter 0.3s ease, opacity 0.3s ease; }
+        .url-bar {
+            flex-grow: 1; display: flex; align-items: center; gap: 8px;
+            background-color: var(--bg-input); border: 1px solid var(--border-color);
+            border-radius: 20px; height: 32px; padding: 0 16px;
+        }
+        .url-bar input {
+            flex-grow: 1; background: transparent; border: none; color: var(--text-main);
+            font-size: 13px; outline: none; width: 100%;
+        }
+
+        /* --- Engine & WISP Controls --- */
+        .proxy-controls { display: flex; gap: 8px; align-items: center; }
+        .control-select {
+            background-color: var(--bg-input); color: var(--text-main);
+            border: 1px solid var(--border-color); border-radius: 6px;
+            padding: 4px 8px; font-size: 11px; outline: none; cursor: pointer; height: 28px;
+        }
+        .wisp-status { font-size: 11px; color: var(--text-muted); min-width: 80px; text-align: right; }
+
+        /* --- Main Content Area --- */
+        .content-area { flex-grow: 1; position: relative; background-color: #ffffff; }
+        iframe {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border: none; display: none; background-color: #ffffff;
+        }
         iframe.active { display: block; }
-        iframe.loading { filter: blur(12px); opacity: 0.4; }
-
-        /* Premium Settings UI */
-        .settings-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center;
-            z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-        }
-        .settings-overlay.active { opacity: 1; pointer-events: auto; }
-        .settings-modal { 
-            background-color: #0c0c0e; border: 1px solid #27272a; border-radius: 16px; 
-            width: 380px; padding: 24px; box-shadow: 0 24px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); 
-            transform: translateY(15px) scale(0.98); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-        }
-        .settings-overlay.active .settings-modal { transform: translateY(0) scale(1); }
-        .settings-header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 24px; font-size: 18px; font-weight: 600; 
-            color: #ffffff; border-bottom: 1px solid #1f1f22; padding-bottom: 16px;
-        }
-        .settings-header .icon-btn { margin-right: -8px; }
-
-        .proxy-manager { display: flex; flex-direction: column; gap: 16px; }
-        .proxy-row { display: flex; flex-direction: column; gap: 8px; }
-        .proxy-row > span { font-size: 13px; font-weight: 500; color: #e4e4e7; }
-        .proxy-row select, .proxy-row input {
-            background: #18181b; color: #ffffff; border: 1px solid #3f3f46; 
-            border-radius: 8px; padding: 10px 12px; font-size: 13px; outline: none; 
-            transition: all 0.2s ease; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-            appearance: none; -webkit-appearance: none;
-        }
-        .proxy-row select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
-        .proxy-row select:hover, .proxy-row input:focus { 
-            border-color: #6366f1; 
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 0 0 3px rgba(99, 102, 241, 0.15);
-        }
-        .proxy-row select:disabled { opacity: 0.5; cursor: not-allowed; border-color: #3f3f46; }
-
-        .input-group { display: flex; gap: 8px; }
-        .input-group input { flex-grow: 1; }
-        .input-group button { 
-            background: #6366f1; color: white; border: none; border-radius: 8px; 
-            padding: 0 16px; font-weight: 500; font-size: 13px; cursor: pointer; transition: background 0.2s;
-        }
-        .input-group button:hover { background: #4f46e5; }
-
-        .wisp-status {
-            font-size: 13px; color: #10b981; margin-top: 8px; padding: 12px; 
-            background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);
-            display: flex; align-items: center; gap: 8px; font-weight: 500;
-        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header-controls">
-            <button class="icon-btn" id="sidebar-toggle" style="color: #a1a1aa;" title="Toggle Sidebar">
-                <i data-lucide="menu" size="20"></i>
-            </button>
-            <div class="nav-group">
-                <button class="icon-btn" onclick="navBack()"><i data-lucide="chevron-left" size="18"></i></button>
-                <button class="icon-btn" onclick="navForward()"><i data-lucide="chevron-right" size="18"></i></button>
-                <button class="icon-btn" onclick="reloadActiveTab()"><i data-lucide="rotate-cw" size="16"></i></button>
-            </div>
-            <button class="icon-btn" id="open-settings" title="Settings"><i data-lucide="settings" size="16"></i></button>
-        </div>
-
-        <div class="sidebar-search">
-            <i data-lucide="search" size="14" color="#a1a1aa"></i>
-            <input type="text" id="url-input" value="/home" placeholder="Search or URL...">
-            <button class="icon-btn" id="star-btn"><i data-lucide="star" size="16"></i></button>
-        </div>
-
-        <div class="app-grid" id="starred-grid">
-            <div class="app-tile" onclick="addNewTab()"><i data-lucide="plus" size="18"></i></div>
-        </div>
-
-        <div class="tab-list" id="tab-list-container"></div>
+    <!-- Tabs Area -->
+    <div class="tabs-container" id="tabs-container">
+        <!-- Tabs inserted here -->
+        <button class="new-tab-btn" onclick="addNewTab('about:blank', 'New Tab')">
+            <i data-lucide="plus" size="18"></i>
+        </button>
     </div>
 
-    <div class="main-area">
-        <div class="content-area" id="iframe-container">
-            <div class="loading-spinner" id="loading-spinner">
-                <i data-lucide="loader-2" size="28"></i>
-            </div>
+    <!-- Navigation Area -->
+    <div class="nav-bar">
+        <div class="nav-actions">
+            <button class="icon-btn" onclick="document.querySelector('iframe.active')?.contentWindow.history.back()"><i data-lucide="arrow-left" size="18"></i></button>
+            <button class="icon-btn" onclick="document.querySelector('iframe.active')?.contentWindow.history.forward()"><i data-lucide="arrow-right" size="18"></i></button>
+            <button class="icon-btn" onclick="document.querySelector('iframe.active')?.contentWindow.location.reload()"><i data-lucide="rotate-cw" size="16"></i></button>
+        </div>
+        
+        <div class="url-bar">
+            <i data-lucide="lock" size="14" color="#888890"></i>
+            <input type="text" id="url-input" placeholder="Search Google or type a URL" autocomplete="off">
+        </div>
+
+        <div class="proxy-controls">
+            <select class="control-select" id="engine-select">
+                <option value="scramjet">Scramjet</option>
+                <option value="uv">Ultraviolet</option>
+            </select>
+            <select class="control-select" id="wisp-select">
+                <option value="auto">Auto WISP</option>
+                <option value="wss://onyxv1.ai.studio/wisp/">onyxv1</option>
+                <option value="wss://reverse.myapl.org/wisp/">reverse</option>
+                <option value="wss://inkmath.adijaya.id/wisp/">inkmath</option>
+            </select>
+            <div class="wisp-status" id="wisp-status">Standby</div>
         </div>
     </div>
 
-    <div class="settings-overlay" id="settings-overlay">
-        <div class="settings-modal">
-            <div class="settings-header">
-                <span>Preferences</span>
-                <button class="icon-btn" id="close-settings"><i data-lucide="x" size="20"></i></button>
-            </div>
-            <div class="proxy-manager">
-                <div class="proxy-row">
-                    <span>Engine</span>
-                    <select id="engine-select">
-                        <option value="uv">Ultraviolet</option>
-                        <option value="scramjet">Scramjet</option>
-                    </select>
-                </div>
-                <div class="proxy-row">
-                    <span>WISP Server</span>
-                    <select id="wisp-select">
-                        <option value="auto">Auto-Select Fastest</option>
-                        <option value="wss://onyxv1.ai.studio/wisp/">onyxv1.ai.studio</option>
-                        <option value="wss://reverse.myapl.org/wisp/">reverse.myapl.org</option>
-                        <option value="wss://inkmath.adijaya.id/wisp/">inkmath.adijaya.id</option>
-                    </select>
-                </div>
-                <div class="proxy-row">
-                    <span>Custom WISP</span>
-                    <div class="input-group">
-                        <input type="text" id="custom-wisp-input" placeholder="wss://...">
-                        <button id="add-wisp-btn">Add</button>
-                    </div>
-                </div>
-                <div class="wisp-status" id="wisp-status">
-                    <i data-lucide="activity" size="16"></i>
-                    <span>Initializing connection...</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Iframe Container -->
+    <div class="content-area" id="iframe-container"></div>
 
     <script type="module">
-        import { registerSW } from "/active/prxy/register-sw.mjs";
         import * as BareMux from "/active/prxy/baremux/index.mjs";
 
         lucide.createIcons();
 
-        let connection;
-        try {
-            connection = new BareMux.BareMuxConnection("/active/prxy/baremux/worker.js");
-        } catch (e) {
-            console.log("BareMux worker initialization skipped or missing.");
-        }
-
+        // Core Proxy Configurations
+        const connection = new BareMux.BareMuxConnection("/active/prxy/baremux/worker.js");
         const WISP_URLS = [
             "wss://onyxv1.ai.studio/wisp/",
             "wss://reverse.myapl.org/wisp/",
@@ -265,475 +169,199 @@
 
         let swReady = null;
         let cachedWisp = null;
+        let scramjetController = null;
+        
+        // Tab State
         let tabs = [];
         let activeTabId = null;
-        let counter = 0;
-        
-        // Scramjet Globals mapping
-        let scramjetController = null;
-        let scramjetFrames = {};
-        
-        let savedBookmarks = JSON.parse(localStorage.getItem('savedBookmarks')) || ["https://open.spotify.com", "https://instagram.com"];
-        let starredUrls = new Set(savedBookmarks);
-        
-        const proxySettings = JSON.parse(localStorage.getItem('proxySettings')) || { engine: 'uv', wisp: 'auto' };
-        document.getElementById('engine-select').value = proxySettings.engine;
-        
-        if (proxySettings.wisp !== 'auto' && !WISP_URLS.includes(proxySettings.wisp)) {
-            const select = document.getElementById('wisp-select');
-            const opt = document.createElement('option');
-            opt.value = proxySettings.wisp;
-            try { opt.textContent = new URL(proxySettings.wisp).hostname; } catch(e) { opt.textContent = "Custom WISP"; }
-            select.appendChild(opt);
-        }
-        document.getElementById('wisp-select').value = proxySettings.wisp;
+        let tabCounter = 0;
 
         const wispStatusEl = document.getElementById('wisp-status');
         const urlInput = document.getElementById('url-input');
-        const starBtn = document.getElementById('star-btn');
-        const starredGrid = document.getElementById('starred-grid');
-        const loadingSpinner = document.getElementById('loading-spinner');
 
-        document.getElementById('sidebar-toggle').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.toggle('collapsed');
-        });
-        document.getElementById('open-settings').addEventListener('click', () => {
-            document.getElementById('settings-overlay').classList.add('active');
-        });
-        document.getElementById('close-settings').addEventListener('click', () => {
-            document.getElementById('settings-overlay').classList.remove('active');
-        });
-        document.getElementById('settings-overlay').addEventListener('click', (e) => {
-            if (e.target === document.getElementById('settings-overlay')) {
-                document.getElementById('settings-overlay').classList.remove('active');
-            }
-        });
-
-        window.navBack = function() {
-            if (!activeTabId) return;
-            const engine = document.getElementById('engine-select').value;
-            if (engine === 'scramjet' && scramjetFrames[activeTabId]) {
-                try { scramjetFrames[activeTabId].back(); } catch(e){}
-            } else {
-                const iframe = document.getElementById(`frame-${activeTabId}`);
-                try { iframe.contentWindow.history.back(); } catch (e) {}
-            }
-        };
-        
-        window.navForward = function() {
-            if (!activeTabId) return;
-            const engine = document.getElementById('engine-select').value;
-            if (engine === 'scramjet' && scramjetFrames[activeTabId]) {
-                try { scramjetFrames[activeTabId].forward(); } catch(e){}
-            } else {
-                const iframe = document.getElementById(`frame-${activeTabId}`);
-                try { iframe.contentWindow.history.forward(); } catch (e) {}
-            }
-        };
-        
-        window.reloadActiveTab = function() {
-            if (!activeTabId) return;
-            const engine = document.getElementById('engine-select').value;
-            if (engine === 'scramjet' && scramjetFrames[activeTabId]) {
-                try { scramjetFrames[activeTabId].reload(); } catch(e){}
-            } else {
-                const tab = tabs.find(t => t.id === activeTabId);
-                if (tab) loadUrlInTab(activeTabId, tab.url);
-            }
-        };
-
-        function saveBookmarks() {
-            localStorage.setItem('savedBookmarks', JSON.stringify(Array.from(starredUrls)));
-        }
-
-        function saveSettings() {
-            localStorage.setItem('proxySettings', JSON.stringify({
-                engine: document.getElementById('engine-select').value,
-                wisp: document.getElementById('wisp-select').value
-            }));
-        }
-
-        function renderStarredGrid() {
-            starredGrid.innerHTML = '';
-            starredUrls.forEach(url => {
-                let domain = url;
-                try { domain = new URL(url).hostname; } catch(e) {}
-                
-                const tile = document.createElement('div');
-                tile.className = 'app-tile';
-                tile.title = domain;
-                tile.onclick = () => loadShortcut(url, domain);
-                tile.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="${domain}" onerror="this.outerHTML='<i data-lucide=\\'globe\\' size=\\'18\\'></i>'">`;
-                starredGrid.appendChild(tile);
-            });
-            
-            const plusBtn = document.createElement('div');
-            plusBtn.className = 'app-tile';
-            plusBtn.onclick = () => addNewTab();
-            plusBtn.innerHTML = `<i data-lucide="plus" size="18"></i>`;
-            starredGrid.appendChild(plusBtn);
-            
-            lucide.createIcons();
-        }
-
-        function updateStarUI(url) {
-            if (starredUrls.has(url)) {
-                starBtn.classList.add('starred');
-                starBtn.innerHTML = `<i data-lucide="star" size="16" fill="currentColor"></i>`;
-            } else {
-                starBtn.classList.remove('starred');
-                starBtn.innerHTML = `<i data-lucide="star" size="16"></i>`;
-            }
-            lucide.createIcons();
-        }
-
-        starBtn.addEventListener('click', () => {
-            if (!activeTabId) return;
-            const tab = tabs.find(t => t.id === activeTabId);
-            if (starredUrls.has(tab.url)) {
-                starredUrls.delete(tab.url);
-            } else {
-                starredUrls.add(tab.url);
-            }
-            saveBookmarks();
-            updateStarUI(tab.url);
-            renderStarredGrid();
-        });
-
+        // --- Proxy Initialization ---
         async function getBestWisp() {
-            wispStatusEl.innerHTML = `<i data-lucide="loader-2" size="16" class="spinning"></i><span>Pinging servers...</span>`;
-            lucide.createIcons();
+            wispStatusEl.innerText = "Pinging...";
             for (const url of WISP_URLS) {
                 try {
                     const ws = new WebSocket(url);
                     await new Promise((resolve, reject) => {
                         ws.onopen = () => { ws.close(); resolve(); };
                         ws.onerror = reject;
-                        setTimeout(reject, 3000);
+                        setTimeout(reject, 2000);
                     });
                     return url;
                 } catch (_) {}
             }
             return WISP_URLS[0];
         }
-        
-        async function initScramjetCore(wispUrl) {
-            if (scramjetController) return;
-            if (typeof window.$scramjetController === 'undefined') return;
+
+        async function ensureProxyReady() {
+            if (!swReady) {
+                wispStatusEl.innerText = "SW Init...";
+                swReady = navigator.serviceWorker.register("/sw.js");
+            }
+            await swReady;
+            await navigator.serviceWorker.ready;
+
+            const selectedWisp = document.getElementById('wisp-select').value;
+            const targetWisp = selectedWisp === 'auto' ? await getBestWisp() : selectedWisp;
             
-            const { Controller } = window.$scramjetController;
-            const config = window.$scramjet?.defaultConfig || window.__scramjet$config;
-            const EpoxyTransport = window.EpoxyClient || window.EpoxyTransport?.default || self.EpoxyTransport?.default;
+            if (cachedWisp !== targetWisp) {
+                cachedWisp = targetWisp;
+
+                // 1. Setup BareMux (For UV)
+                await connection.setTransport("/active/prxy/libcurl/libcurl.mjs", [{ wisp: cachedWisp }]);
+
+                // 2. Setup Scramjet
+                const EpoxyTransport = self.EpoxyTransport.default;
+                const { Controller } = window.$scramjetController;
+                const { defaultConfig } = window.$scramjet;
+
+                const transport = new EpoxyTransport({ wisp: cachedWisp });
+                await transport.init();
+
+                const serviceworker = navigator.serviceWorker.controller ?? (await navigator.serviceWorker.ready).active;
+                
+                scramjetController = new Controller({
+                    serviceworker,
+                    transport,
+                    scramjetConfig: defaultConfig
+                });
+                await scramjetController.wait();
+
+                // Clear attached frames if WISP changes
+                tabs.forEach(t => t.scramjetFrame = null);
+            }
             
-            const swReg = await navigator.serviceWorker.ready;
-            const serviceworker = navigator.serviceWorker.controller || swReg.active;
-            const transport = new EpoxyTransport({ wisp: wispUrl });
-            await transport.init();
-            
-            scramjetController = new Controller({
-                serviceworker,
-                transport,
-                scramjetConfig: config
-            });
-            await scramjetController.wait();
+            wispStatusEl.innerText = new URL(cachedWisp).hostname.split('.')[0];
         }
 
-        async function setupWisp(targetWisp) {
-            try {
-                if (typeof registerSW !== 'undefined') {
-                    if (!swReady) swReady = registerSW();
-                    await swReady;
-                }
-                cachedWisp = targetWisp === 'auto' ? await getBestWisp() : targetWisp;
-                const engine = document.getElementById('engine-select').value;
-                
-                if (engine === 'uv' && connection) {
-                    await connection.setTransport("/active/prxy/libcurl/libcurl.mjs", [{ wisp: cachedWisp }]);
-                } else if (engine === 'scramjet') {
-                    await initScramjetCore(cachedWisp);
-                }
-                
-                let displayStatus = "";
-                if (engine === 'scramjet' && targetWisp === "wss://theavancehotel.com/fairs/") {
-                    displayStatus = `Forced WISP: theavancehotel.com`;
-                } else {
-                    displayStatus = `Connected to ${new URL(cachedWisp).hostname}`;
-                }
-                
-                wispStatusEl.innerHTML = `<i data-lucide="check-circle" size="16"></i><span>${displayStatus}</span>`;
-                wispStatusEl.style.color = '#10b981';
-                wispStatusEl.style.borderColor = 'rgba(16, 185, 129, 0.2)';
-                wispStatusEl.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-                lucide.createIcons();
-            } catch (err) {
-                wispStatusEl.innerHTML = `<i data-lucide="alert-triangle" size="16"></i><span>Connection Error</span>`;
-                wispStatusEl.style.color = '#ef4444';
-                wispStatusEl.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-                wispStatusEl.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                lucide.createIcons();
-            }
-        }
-
-        function updateWispUIState() {
-            const engine = document.getElementById('engine-select').value;
-            const wispSelect = document.getElementById('wisp-select');
-            if (engine === 'scramjet') {
-                wispSelect.disabled = true;
-                setupWisp("wss://theavancehotel.com/fairs/");
-            } else {
-                wispSelect.disabled = false;
-                setupWisp(wispSelect.value);
-            }
-        }
-
-        document.getElementById('engine-select').addEventListener('change', () => {
-            saveSettings();
-            updateWispUIState();
+        document.getElementById('wisp-select').addEventListener('change', () => {
+            if (activeTabId) navigateToInput();
         });
 
-        document.getElementById('wisp-select').addEventListener('change', async (e) => {
-            saveSettings();
-            await setupWisp(e.target.value);
-        });
-
-        document.getElementById('add-wisp-btn').addEventListener('click', () => {
-            const newWisp = document.getElementById('custom-wisp-input').value.trim();
-            if (newWisp && (newWisp.startsWith('wss://') || newWisp.startsWith('ws://'))) {
-                const select = document.getElementById('wisp-select');
-                const opt = document.createElement('option');
-                opt.value = newWisp;
-                try { opt.textContent = new URL(newWisp).hostname; } catch(e) { opt.textContent = "Custom WISP"; }
-                select.appendChild(opt);
-                select.value = newWisp;
-                
-                saveSettings();
-                if (document.getElementById('engine-select').value !== 'scramjet') {
-                    setupWisp(newWisp);
-                }
-                document.getElementById('custom-wisp-input').value = '';
-            }
-        });
-
-        function searchUrl(input) {
-            if (input === '/home') return input;
+        // --- Navigation Logic ---
+        function formatUrl(input) {
+            if (input === 'about:blank') return input;
             try { return new URL(input).toString(); } catch (e) {}
             try {
-                const u = new URL(`http://${input}`);
+                const u = new URL(`https://${input}`);
                 if (u.hostname.includes(".")) return u.toString();
             } catch (e) {}
             return "https://www.google.com/search?q=" + encodeURIComponent(input);
         }
 
-        window.__getProxiedUrl = async function(rawUrl) {
-            if (rawUrl === '/home') return rawUrl;
-            const targetUrl = searchUrl(rawUrl);
-            const engine = document.getElementById('engine-select').value;
-
-            if (!cachedWisp || (engine !== 'scramjet' && cachedWisp === "wss://theavancehotel.com/fairs/")) {
-                await setupWisp(document.getElementById('wisp-select').value);
-            }
-
-            if (engine === 'scramjet' && typeof __scramjet$config !== 'undefined') {
-                return __scramjet$config.prefix + __scramjet$config.encodeUrl(targetUrl);
-            } else if (engine === 'uv' && typeof __uv$config !== 'undefined') {
-                return __uv$config.prefix + __uv$config.encodeUrl(targetUrl);
-            }
-            return targetUrl;
-        };
-
-        function updateTabIcon(tabId, rawUrl) {
-            const iconEl = document.querySelector(`#tab-btn-${tabId} .tab-icon`);
-            if (!iconEl) return;
-            if (rawUrl === '/home') {
-                iconEl.innerHTML = `<i data-lucide="home" size="16"></i>`;
-                lucide.createIcons();
-                return;
-            }
-            try {
-                let domain = searchUrl(rawUrl);
-                if (domain.startsWith('http')) {
-                    domain = new URL(domain).hostname;
-                }
-                iconEl.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=32" style="width:16px;height:16px;border-radius:2px;" onerror="this.outerHTML='<i data-lucide=\\'globe\\' size=\\'16\\'></i>'">`;
-            } catch (e) {
-                iconEl.innerHTML = `<i data-lucide="globe" size="16"></i>`;
-                lucide.createIcons();
-            }
-        }
-
-        async function loadUrlInTab(tabId, rawUrl) {
-            const iframe = document.getElementById(`frame-${tabId}`);
-            if (!iframe) return;
-
-            iframe.classList.add('loading');
-            if (tabId === activeTabId) {
-                loadingSpinner.style.display = 'flex';
-            }
-
-            iframe.onload = () => {
-                iframe.classList.remove('loading');
-                if (tabId === activeTabId) loadingSpinner.style.display = 'none';
-
-                try {
-                    const loc = iframe.contentWindow.location;
-                    const path = loc.pathname + loc.search + loc.hash;
-                    const engine = document.getElementById('engine-select').value;
-                    let realUrl = "";
-
-                    if (engine === 'uv' && typeof __uv$config !== 'undefined' && path.startsWith(__uv$config.prefix)) {
-                        realUrl = __uv$config.decodeUrl(path.substring(__uv$config.prefix.length));
-                    } else if (engine === 'scramjet' && typeof __scramjet$config !== 'undefined' && path.startsWith(__scramjet$config.prefix)) {
-                        realUrl = __scramjet$config.decodeUrl(path.substring(__scramjet$config.prefix.length));
-                    }
-
-                    if (realUrl && realUrl !== "about:blank") {
-                        let realTitle = iframe.contentDocument ? iframe.contentDocument.title : "";
-                        if (!realTitle) realTitle = new URL(realUrl).hostname || realUrl;
-
-                        const tab = tabs.find(t => t.id === tabId);
-                        if (tab) {
-                            tab.url = realUrl;
-                            tab.title = realTitle;
-                        }
-
-                        const titleEl = document.getElementById(`title-${tabId}`);
-                        if (titleEl) titleEl.innerText = realTitle;
-                        updateTabIcon(tabId, realUrl);
-
-                        if (tabId === activeTabId) {
-                            urlInput.value = realUrl;
-                            updateStarUI(realUrl);
-                        }
-                    }
-                } catch(e) {
-                    // Cross-origin restriction fallback silently
-                }
-            };
-
-            updateTabIcon(tabId, rawUrl);
-            const engine = document.getElementById('engine-select').value;
-            const targetUrl = searchUrl(rawUrl);
+        async function navigateFrame(tabId, rawUrl) {
+            if (rawUrl === 'about:blank') return;
             
-            if (engine === 'scramjet' && rawUrl !== '/home') {
-                await setupWisp("wss://theavancehotel.com/fairs/");
-                if (!scramjetController) await initScramjetCore("wss://theavancehotel.com/fairs/");
-                
-                if (!scramjetFrames[tabId] && scramjetController) {
-                    scramjetFrames[tabId] = scramjetController.createFrame(iframe);
+            await ensureProxyReady();
+            const engine = document.getElementById('engine-select').value;
+            const targetUrl = formatUrl(rawUrl);
+            const tab = tabs.find(t => t.id === tabId);
+            const iframe = document.getElementById(`frame-${tabId}`);
+
+            if (engine === 'scramjet') {
+                if (!tab.scramjetFrame) {
+                    tab.scramjetFrame = scramjetController.createFrame(iframe);
                 }
-                
-                if (scramjetFrames[tabId]) {
-                    scramjetFrames[tabId].go(targetUrl);
+                tab.scramjetFrame.go(targetUrl);
+            } else if (engine === 'uv') {
+                if (typeof __uv$config !== 'undefined') {
+                    iframe.src = __uv$config.prefix + __uv$config.encodeUrl(targetUrl);
+                } else {
+                    console.error("UV config missing");
                 }
-            } else {
-                const proxiedUrl = await window.__getProxiedUrl(rawUrl);
-                iframe.src = proxiedUrl;
             }
         }
 
-        window.addNewTab = async function(initialUrl = "/home", title = "Home") {
-            const id = `tab-${counter++}`;
-            tabs.push({ id, url: initialUrl, title });
+        // --- Tab Management ---
+        window.addNewTab = async function(initialUrl = "about:blank", title = "New Tab") {
+            const id = `tab-${tabCounter++}`;
+            tabs.push({ id, url: initialUrl, title, scramjetFrame: null });
 
-            const tabList = document.getElementById('tab-list-container');
+            const tabContainer = document.getElementById('tabs-container');
+            const newTabBtn = document.querySelector('.new-tab-btn');
+            
             const tabEl = document.createElement('div');
-            tabEl.className = 'tab-item';
+            tabEl.className = 'tab';
             tabEl.id = `tab-btn-${id}`;
             tabEl.onclick = () => switchTab(id);
             tabEl.innerHTML = `
-                <div class="tab-icon"><i data-lucide="globe" size="16"></i></div>
+                <img src="https://www.google.com/s2/favicons?domain=google.com&sz=16" width="14" height="14" style="border-radius:2px;" id="favicon-${id}">
                 <div class="tab-title" id="title-${id}">${title}</div>
-                <div class="tab-close" onclick="closeTab('${id}', event)"><i data-lucide="x" size="14"></i></div>
+                <div class="tab-close" onclick="closeTab('${id}', event)"><i data-lucide="x" size="12"></i></div>
             `;
-            tabList.appendChild(tabEl);
+            tabContainer.insertBefore(tabEl, newTabBtn);
 
-            const container = document.getElementById('iframe-container');
+            const iframeContainer = document.getElementById('iframe-container');
             const iframe = document.createElement('iframe');
             iframe.id = `frame-${id}`;
-            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
-            container.appendChild(iframe);
+            iframeContainer.appendChild(iframe);
 
             lucide.createIcons();
             switchTab(id);
 
-            await loadUrlInTab(id, initialUrl);
+            if (initialUrl !== 'about:blank') {
+                await navigateFrame(id, initialUrl);
+            }
         };
 
         window.switchTab = function(id) {
             activeTabId = id;
-            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('iframe').forEach(i => i.classList.remove('active'));
 
-            const activeBtn = document.getElementById(`tab-btn-${id}`);
-            const activeFrame = document.getElementById(`frame-${id}`);
-
-            if (activeBtn) activeBtn.classList.add('active');
-            if (activeFrame) {
-                activeFrame.classList.add('active');
-                if (activeFrame.classList.contains('loading')) {
-                    loadingSpinner.style.display = 'flex';
-                } else {
-                    loadingSpinner.style.display = 'none';
-                }
-            }
+            document.getElementById(`tab-btn-${id}`).classList.add('active');
+            document.getElementById(`frame-${id}`).classList.add('active');
 
             const tab = tabs.find(t => t.id === id);
             if (tab) {
-                urlInput.value = tab.url;
-                updateStarUI(tab.url);
+                urlInput.value = tab.url === 'about:blank' ? '' : tab.url;
             }
         };
 
         window.closeTab = function(id, event) {
             event.stopPropagation();
-            const tabBtn = document.getElementById(`tab-btn-${id}`);
-            const frame = document.getElementById(`frame-${id}`);
-            if (tabBtn) tabBtn.remove();
-            if (frame) frame.remove();
-            
-            if (scramjetFrames[id]) {
-                delete scramjetFrames[id];
-            }
-
+            document.getElementById(`tab-btn-${id}`).remove();
+            document.getElementById(`frame-${id}`).remove();
             tabs = tabs.filter(t => t.id !== id);
-            if (tabs.length === 0) {
-                addNewTab("/home", "Home");
-            } else if (activeTabId === id) {
-                switchTab(tabs[tabs.length - 1].id);
-            }
-        };
 
-        window.loadShortcut = async function(url, title) {
-            if (!activeTabId) {
-                await addNewTab(url, title);
-                return;
+            if (activeTabId === id) {
+                if (tabs.length > 0) switchTab(tabs[tabs.length - 1].id);
+                else window.addNewTab();
             }
-            const tab = tabs.find(t => t.id === activeTabId);
-            tab.url = url;
-            tab.title = title;
-            document.getElementById(`title-${activeTabId}`).innerText = title;
-            urlInput.value = url;
-            updateStarUI(url);
-            await loadUrlInTab(activeTabId, url);
         };
 
         urlInput.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter' && activeTabId) {
-                const val = urlInput.value.trim();
-                if (!val) return;
-                const tab = tabs.find(t => t.id === activeTabId);
-                tab.url = val;
-                tab.title = val;
-                document.getElementById(`title-${activeTabId}`).innerText = val;
-                updateStarUI(val);
-                await loadUrlInTab(activeTabId, val);
+                await window.navigateToInput();
             }
         });
 
-        // Startup Initialization
-        updateWispUIState();
-        renderStarredGrid();
-        addNewTab("/home", "Home");
+        window.navigateToInput = async function() {
+            if (!activeTabId) return;
+            const val = urlInput.value.trim();
+            if (!val) return;
+            
+            const tab = tabs.find(t => t.id === activeTabId);
+            tab.url = val;
+            tab.title = val;
+            document.getElementById(`title-${activeTabId}`).innerText = val;
+
+            // Attempt to update favicon based on domain
+            try {
+                const domain = new URL(formatUrl(val)).hostname;
+                document.getElementById(`favicon-${activeTabId}`).src = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+            } catch (e) {}
+
+            await navigateFrame(activeTabId, val);
+        };
+
+        // Boot
+        ensureProxyReady().then(() => {
+            addNewTab("https://google.com", "Google");
+        });
     </script>
 </body>
 </html>
