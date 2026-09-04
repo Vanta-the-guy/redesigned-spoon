@@ -48,6 +48,12 @@
             animation: pulse 1.5s infinite ease-in-out;
         }
 
+        #setup-overlay.error-state { flex-direction: column; gap: 18px; text-align: center; padding: 24px; }
+        #setup-overlay.error-state #loading-text { color: #ffffff !important; animation: none; }
+        #setup-error { max-width: 520px; color: #a1a1aa; font: 14px/1.5 "Segoe UI", sans-serif; }
+        #setup-retry { background: #ffffff; color: #000000; border: 0; border-radius: 4px; padding: 10px 16px; font: 600 13px "Segoe UI", sans-serif; cursor: pointer; }
+        #setup-retry:hover { background: #d4d4d8; }
+
         @keyframes pulse {
             0% { opacity: 0.4; }
             50% { opacity: 1; }
@@ -185,8 +191,6 @@
     </div>
 
     <script type="module">
-        import { registerSW } from "/active/prxy/register-sw.mjs";
-
         lucide.createIcons();
 
         // Server List
@@ -206,6 +210,9 @@
         let scramjetController = null;
         let scramjetFrames = {};
         let currentScramjetWisp = null;
+        let persistentWispSocket = null;
+        let reconnectTimer = null;
+        let setupInProgress = false;
         
         let savedBookmarks = JSON.parse(localStorage.getItem('savedBookmarks')) || ["https://open.spotify.com", "https://instagram.com"];
         let starredUrls = new Set(savedBookmarks);
@@ -219,42 +226,77 @@
             document.getElementById('sidebar').classList.toggle('collapsed');
         });
 
-        // Silent Automatic Setup Process
+        function showSetupError(message) {
+            const overlay = document.getElementById('setup-overlay');
+            const loadingText = document.getElementById('loading-text');
+            if (!overlay || !loadingText) return;
+            document.getElementById('setup-error')?.remove();
+            document.getElementById('setup-retry')?.remove();
+            overlay.classList.add('error-state');
+            loadingText.innerText = "connection failed.";
+            loadingText.style.color = "#ffffff";
+            loadingText.insertAdjacentHTML('afterend', `<div id="setup-error"></div><button id="setup-retry" type="button">Retry connection</button>`);
+            document.getElementById('setup-error').innerText = message;
+            document.getElementById('setup-retry').onclick = () => {
+                overlay.classList.remove('error-state');
+                document.getElementById('setup-error')?.remove();
+                document.getElementById('setup-retry')?.remove();
+                loadingText.innerText = "loading...";
+                loadingText.style.color = "#ffffff";
+                loadingText.style.animation = "pulse 1.5s infinite ease-in-out";
+                runInitialSetup();
+            };
+        }
+
+        function keepWispConnected(wispUrl) {
+            if (persistentWispSocket && persistentWispSocket.url === wispUrl && persistentWispSocket.readyState <= WebSocket.OPEN) return;
+            if (persistentWispSocket) persistentWispSocket.close();
+            const socket = new WebSocket(wispUrl);
+            persistentWispSocket = socket;
+            socket.onopen = () => {
+                if (persistentWispSocket !== socket) return;
+                console.info("WISP connection established");
+            };
+            socket.onclose = () => {
+                if (persistentWispSocket !== socket) return;
+                persistentWispSocket = null;
+                clearTimeout(reconnectTimer);
+                reconnectTimer = setTimeout(() => keepWispConnected(wispUrl), 2000);
+            };
+            socket.onerror = () => socket.close();
+        }
+
+        function findAvailableWisp(excludedUrl = null) {
+            const candidates = WISP_URLS.filter(url => url !== excludedUrl);
+            return Promise.any(candidates.map(url => new Promise((resolve, reject) => {
+                let socket;
+                try { socket = new WebSocket(url); } catch (error) { reject(error); return; }
+                const timeoutId = setTimeout(() => {
+                    socket.close();
+                    reject(new Error("WISP connection timeout"));
+                }, 10000);
+                socket.onopen = () => {
+                    clearTimeout(timeoutId);
+                    socket.close();
+                    resolve(url);
+                };
+                socket.onerror = error => {
+                    clearTimeout(timeoutId);
+                    reject(error);
+                };
+            })));
+        }
+
+        // Set up the service worker and maintain a recoverable WISP connection.
         async function runInitialSetup() {
+            if (setupInProgress) return;
+            setupInProgress = true;
             try {
-                if (typeof registerSW !== 'undefined') {
-                    if (!swReady) swReady = registerSW();
-                    await swReady;
-                } else {
-                    throw new Error("registerSW module missing.");
-                }
+                if (!swReady) swReady = navigator.serviceWorker.register("/sw.js", { scope: "/" });
+                await swReady;
                 
-                const pingPromises = WISP_URLS.map(url => {
-                    return new Promise((resolve, reject) => {
-                        let ws;
-                        try { ws = new WebSocket(url); } catch (e) { return reject(e); }
-                        
-                        const timeoutId = setTimeout(() => {
-                            if (ws.readyState !== WebSocket.OPEN) {
-                                ws.close();
-                                reject(new Error("Timeout"));
-                            }
-                        }, 3000);
-
-                        ws.onopen = () => {
-                            clearTimeout(timeoutId);
-                            ws.close();
-                            resolve(url);
-                        };
-                        
-                        ws.onerror = (err) => {
-                            clearTimeout(timeoutId);
-                            reject(err);
-                        };
-                    });
-                });
-
-                cachedWisp = await Promise.any(pingPromises);
+                cachedWisp = await findAvailableWisp();
+                keepWispConnected(cachedWisp);
                 await initScramjetCore(cachedWisp);
 
                 setTimeout(() => {
@@ -267,12 +309,9 @@
 
             } catch (err) {
                 console.error(err);
-                const loadingText = document.getElementById('loading-text');
-                if (loadingText) {
-                    loadingText.innerText = "connection failed.";
-                    loadingText.style.color = "#ef4444";
-                    loadingText.style.animation = "none";
-                }
+                showSetupError("The proxy server could not be reached. Check the server list or retry the connection.");
+            } finally {
+                setupInProgress = false;
             }
         }
 
@@ -358,7 +397,11 @@
             const transport = new EpoxyTransport({ wisp: wispUrl });
             await transport.init();
             
-            scramjetController = new Controller({ serviceworker, transport, scramjetConfig: defaultConfig });
+            scramjetController = new Controller({
+                serviceworker,
+                transport,
+                scramjetConfig: { ...defaultConfig, prefix: "/sj/" }
+            });
             await scramjetController.wait();
             currentScramjetWisp = wispUrl;
             scramjetFrames = {};
@@ -394,7 +437,7 @@
             }
         }
 
-        async function loadUrlInTab(tabId, rawUrl) {
+        async function loadUrlInTab(tabId, rawUrl, retrying = false) {
             const iframe = document.getElementById(`frame-${tabId}`);
             if (!iframe) return;
 
@@ -452,12 +495,28 @@
                         scramjetFrames[tabId] = scramjetController.createFrame(iframe);
                     }
                     if (scramjetFrames[tabId]) {
-                        scramjetFrames[tabId].go(targetUrl);
+                        await Promise.resolve(scramjetFrames[tabId].go(targetUrl));
                     }
                 } catch (e) {
+                    if (!retrying && String(e).includes("MuxTaskEnded")) {
+                        try {
+                            const previousWisp = cachedWisp;
+                            scramjetController = null;
+                            currentScramjetWisp = null;
+                            scramjetFrames = {};
+                            cachedWisp = await findAvailableWisp(previousWisp);
+                            keepWispConnected(cachedWisp);
+                            await initScramjetCore(cachedWisp);
+                            await loadUrlInTab(tabId, rawUrl, true);
+                            return;
+                        } catch (recoveryError) {
+                            console.error("WISP recovery failed", recoveryError);
+                        }
+                    }
                     loadingSpinner.style.display = 'none';
                     iframe.classList.remove('loading');
                     console.error("Frame routing failed", e);
+                    showSetupError("This page could not be loaded through the proxy. Retry the connection and try again.");
                 }
             } else {
                 iframe.removeAttribute('srcdoc'); 
