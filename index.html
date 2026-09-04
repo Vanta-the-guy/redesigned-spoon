@@ -24,7 +24,7 @@
             display: flex;
         }
 
-        /* Black Screen Setup Overlay */
+        /* Simple "Sans" Loading Screen */
         #setup-overlay {
             position: fixed;
             top: 0;
@@ -34,25 +34,25 @@
             background-color: #000000;
             z-index: 9999;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-family: 'Courier New', Courier, monospace;
-            color: #10b981;
+            font-family: "Comic Sans MS", "Comic Sans", sans-serif;
+            color: #ffffff;
             transition: opacity 0.8s ease;
         }
-        #setup-log {
-            width: 80%;
-            max-width: 600px;
-            font-size: 14px;
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+        
+        #loading-text {
+            font-size: 24px;
+            font-weight: normal;
+            letter-spacing: 2px;
+            animation: pulse 1.5s infinite ease-in-out;
         }
-        .log-entry { opacity: 0; animation: fadeIn 0.3s forwards; }
-        .log-error { color: #ef4444; }
-        @keyframes fadeIn { to { opacity: 1; } }
+
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
 
         /* Sidebar & Slim Mode */
         .sidebar {
@@ -145,11 +145,9 @@
 </head>
 <body>
 
-    <!-- Setup Screen -->
+    <!-- Simple Setup Screen -->
     <div id="setup-overlay">
-        <div id="setup-log">
-            <div class="log-entry">> Initializing Boot Sequence...</div>
-        </div>
+        <h1 id="loading-text">loading...</h1>
     </div>
 
     <!-- Main UI -->
@@ -191,7 +189,7 @@
 
         lucide.createIcons();
 
-        // New Server List
+        // Server List
         const WISP_URLS = [
             "wss://cdn.vipersfutbol.com/adblock/",
             "wss://cdn.pcesc.org/adblock/",
@@ -221,28 +219,15 @@
             document.getElementById('sidebar').classList.toggle('collapsed');
         });
 
-        // Setup Logger
-        function addSetupLog(message, isError = false) {
-            const logContainer = document.getElementById('setup-log');
-            const entry = document.createElement('div');
-            entry.className = isError ? 'log-entry log-error' : 'log-entry';
-            entry.innerText = `> ${message}`;
-            logContainer.appendChild(entry);
-        }
-
-        // Automatic Setup Process
+        // Silent Automatic Setup Process
         async function runInitialSetup() {
             try {
-                addSetupLog("Registering Service Worker...");
                 if (typeof registerSW !== 'undefined') {
                     if (!swReady) swReady = registerSW();
                     await swReady;
-                    addSetupLog("Service Worker registered successfully.");
                 } else {
                     throw new Error("registerSW module missing.");
                 }
-
-                addSetupLog("Pinging network relays to find unblocked connection...");
                 
                 const pingPromises = WISP_URLS.map(url => {
                     return new Promise((resolve, reject) => {
@@ -270,23 +255,24 @@
                 });
 
                 cachedWisp = await Promise.any(pingPromises);
-                addSetupLog(`Connection established with: ${new URL(cachedWisp).hostname}`);
-                
-                addSetupLog("Initializing Proxy Core...");
                 await initScramjetCore(cachedWisp);
 
-                addSetupLog("Setup complete. Launching UI...");
-                
                 setTimeout(() => {
                     const overlay = document.getElementById('setup-overlay');
-                    overlay.style.opacity = '0';
-                    setTimeout(() => overlay.remove(), 800);
-                }, 1000);
+                    if (overlay) {
+                        overlay.style.opacity = '0';
+                        setTimeout(() => overlay.remove(), 800);
+                    }
+                }, 500);
 
             } catch (err) {
                 console.error(err);
-                addSetupLog("CRITICAL FAILURE: All servers blocked or unreachable.", true);
-                addSetupLog("Please check your network and refresh to try again.", true);
+                const loadingText = document.getElementById('loading-text');
+                if (loadingText) {
+                    loadingText.innerText = "connection failed.";
+                    loadingText.style.color = "#ef4444";
+                    loadingText.style.animation = "none";
+                }
             }
         }
 
@@ -580,7 +566,7 @@
         renderStarredGrid();
         addNewTab("/home", "Home");
         
-        // Start setup sequence on load
+        // Start silent setup sequence on load
         runInitialSetup();
     </script>
 </body>
