@@ -24,6 +24,36 @@
             display: flex;
         }
 
+        /* Black Screen Setup Overlay */
+        #setup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000000;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            color: #10b981;
+            transition: opacity 0.8s ease;
+        }
+        #setup-log {
+            width: 80%;
+            max-width: 600px;
+            font-size: 14px;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .log-entry { opacity: 0; animation: fadeIn 0.3s forwards; }
+        .log-error { color: #ef4444; }
+        @keyframes fadeIn { to { opacity: 1; } }
+
         /* Sidebar & Slim Mode */
         .sidebar {
             width: 260px;
@@ -106,76 +136,23 @@
         .content-area { flex-grow: 1; position: relative; background-color: #000000; }
         
         .loading-spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; align-items: center; justify-content: center; z-index: 5; pointer-events: none; color: #a1a1aa; animation: spin 0.8s linear infinite; }
-        .spinning { animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 
         iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; display: none; background-color: #09090b; transition: filter 0.3s ease, opacity 0.3s ease; }
         iframe.active { display: block; }
         iframe.loading { filter: blur(12px); opacity: 0.4; }
-
-        /* Enhanced Settings UI */
-        .settings-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center;
-            z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-        }
-        .settings-overlay.active { opacity: 1; pointer-events: auto; }
-        
-        .settings-modal { 
-            background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #27272a; 
-            border-radius: 16px; width: 420px; padding: 32px; 
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05); 
-            transform: translateY(20px) scale(0.95); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            position: relative; overflow: hidden;
-        }
-        .settings-modal::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
-        }
-        .settings-overlay.active .settings-modal { transform: translateY(0) scale(1); }
-        
-        .settings-header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 28px; font-size: 22px; font-weight: 700; color: #ffffff;
-        }
-        .settings-header .icon-btn { margin-right: -8px; background: rgba(255,255,255,0.05); }
-        .settings-header .icon-btn:hover { background: rgba(239, 68, 68, 0.9); color: white; }
-
-        .proxy-manager { display: flex; flex-direction: column; gap: 20px; }
-        .proxy-row { display: flex; flex-direction: column; gap: 8px; }
-        .proxy-row > span { font-size: 14px; font-weight: 600; color: #e4e4e7; }
-        
-        .proxy-row select, .proxy-row input {
-            background: #09090b; color: #ffffff; border: 1px solid #3f3f46; 
-            border-radius: 10px; padding: 12px 14px; font-size: 14px; outline: none; 
-            transition: all 0.2s ease; width: 100%;
-            appearance: none; -webkit-appearance: none;
-        }
-        .proxy-row select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
-        .proxy-row select:hover, .proxy-row input:focus { 
-            border-color: #a855f7; 
-            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
-        }
-
-        .input-group { display: flex; gap: 10px; }
-        .input-group input { flex-grow: 1; }
-        .input-group button { 
-            background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; 
-            border: none; border-radius: 10px; padding: 0 20px; font-weight: 600; 
-            font-size: 14px; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;
-        }
-        .input-group button:hover { box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transform: translateY(-1px); }
-        .input-group button:active { transform: translateY(1px); }
-
-        .wisp-status {
-            font-size: 14px; color: #10b981; margin-top: 4px; padding: 14px; 
-            background: rgba(16, 185, 129, 0.1); border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.2);
-            display: flex; align-items: center; gap: 10px; font-weight: 500;
-        }
     </style>
 </head>
 <body>
 
+    <!-- Setup Screen -->
+    <div id="setup-overlay">
+        <div id="setup-log">
+            <div class="log-entry">> Initializing Boot Sequence...</div>
+        </div>
+    </div>
+
+    <!-- Main UI -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header-controls">
             <button class="icon-btn" id="sidebar-toggle" style="color: #a1a1aa;" title="Toggle Sidebar">
@@ -186,7 +163,6 @@
                 <button class="icon-btn" onclick="navForward()"><i data-lucide="chevron-right" size="18"></i></button>
                 <button class="icon-btn" onclick="reloadActiveTab()"><i data-lucide="rotate-cw" size="16"></i></button>
             </div>
-            <button class="icon-btn" id="open-settings" title="Settings"><i data-lucide="settings" size="16"></i></button>
         </div>
 
         <div class="sidebar-search">
@@ -210,46 +186,17 @@
         </div>
     </div>
 
-    <div class="settings-overlay" id="settings-overlay">
-        <div class="settings-modal">
-            <div class="settings-header">
-                <span>Preferences</span>
-                <button class="icon-btn" id="close-settings"><i data-lucide="x" size="20"></i></button>
-            </div>
-            <div class="proxy-manager">
-                <div class="proxy-row">
-                    <span>WISP Server</span>
-                    <select id="wisp-select">
-                        <option value="auto">Auto-Select Fastest</option>
-                        <option value="wss://onyxv1.ai.studio/wisp/">onyxv1.ai.studio</option>
-                        <option value="wss://reverse.myapl.org/wisp/">reverse.myapl.org</option>
-                        <option value="wss://inkmath.adijaya.id/wisp/">inkmath.adijaya.id</option>
-                    </select>
-                </div>
-                <div class="proxy-row">
-                    <span>Custom WISP</span>
-                    <div class="input-group">
-                        <input type="text" id="custom-wisp-input" placeholder="wss://...">
-                        <button id="add-wisp-btn">Add</button>
-                    </div>
-                </div>
-                <div class="wisp-status" id="wisp-status">
-                    <i data-lucide="activity" size="16"></i>
-                    <span>Initializing connection...</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script type="module">
         import { registerSW } from "/active/prxy/register-sw.mjs";
 
         lucide.createIcons();
 
+        // New Server List
         const WISP_URLS = [
-            "wss://onyxv1.ai.studio/wisp/",
-            "wss://reverse.myapl.org/wisp/",
-            "wss://inkmath.adijaya.id/wisp/"
+            "wss://cdn.vipersfutbol.com/adblock/",
+            "wss://cdn.pcesc.org/adblock/",
+            "wss://cdn.kcchallengevbc.com/adblock/",
+            "wss://cdn.slcbmooc.org/adblock/"
         ];
 
         let swReady = null;
@@ -264,19 +211,7 @@
         
         let savedBookmarks = JSON.parse(localStorage.getItem('savedBookmarks')) || ["https://open.spotify.com", "https://instagram.com"];
         let starredUrls = new Set(savedBookmarks);
-        
-        const proxySettings = JSON.parse(localStorage.getItem('proxySettings')) || { wisp: 'auto' };
-        
-        if (proxySettings.wisp !== 'auto' && !WISP_URLS.includes(proxySettings.wisp)) {
-            const select = document.getElementById('wisp-select');
-            const opt = document.createElement('option');
-            opt.value = proxySettings.wisp;
-            try { opt.textContent = new URL(proxySettings.wisp).hostname; } catch(e) { opt.textContent = "Custom WISP"; }
-            select.appendChild(opt);
-        }
-        document.getElementById('wisp-select').value = proxySettings.wisp || 'auto';
 
-        const wispStatusEl = document.getElementById('wisp-status');
         const urlInput = document.getElementById('url-input');
         const starBtn = document.getElementById('star-btn');
         const starredGrid = document.getElementById('starred-grid');
@@ -285,17 +220,75 @@
         document.getElementById('sidebar-toggle').addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('collapsed');
         });
-        document.getElementById('open-settings').addEventListener('click', () => {
-            document.getElementById('settings-overlay').classList.add('active');
-        });
-        document.getElementById('close-settings').addEventListener('click', () => {
-            document.getElementById('settings-overlay').classList.remove('active');
-        });
-        document.getElementById('settings-overlay').addEventListener('click', (e) => {
-            if (e.target === document.getElementById('settings-overlay')) {
-                document.getElementById('settings-overlay').classList.remove('active');
+
+        // Setup Logger
+        function addSetupLog(message, isError = false) {
+            const logContainer = document.getElementById('setup-log');
+            const entry = document.createElement('div');
+            entry.className = isError ? 'log-entry log-error' : 'log-entry';
+            entry.innerText = `> ${message}`;
+            logContainer.appendChild(entry);
+        }
+
+        // Automatic Setup Process
+        async function runInitialSetup() {
+            try {
+                addSetupLog("Registering Service Worker...");
+                if (typeof registerSW !== 'undefined') {
+                    if (!swReady) swReady = registerSW();
+                    await swReady;
+                    addSetupLog("Service Worker registered successfully.");
+                } else {
+                    throw new Error("registerSW module missing.");
+                }
+
+                addSetupLog("Pinging network relays to find unblocked connection...");
+                
+                const pingPromises = WISP_URLS.map(url => {
+                    return new Promise((resolve, reject) => {
+                        let ws;
+                        try { ws = new WebSocket(url); } catch (e) { return reject(e); }
+                        
+                        const timeoutId = setTimeout(() => {
+                            if (ws.readyState !== WebSocket.OPEN) {
+                                ws.close();
+                                reject(new Error("Timeout"));
+                            }
+                        }, 3000);
+
+                        ws.onopen = () => {
+                            clearTimeout(timeoutId);
+                            ws.close();
+                            resolve(url);
+                        };
+                        
+                        ws.onerror = (err) => {
+                            clearTimeout(timeoutId);
+                            reject(err);
+                        };
+                    });
+                });
+
+                cachedWisp = await Promise.any(pingPromises);
+                addSetupLog(`Connection established with: ${new URL(cachedWisp).hostname}`);
+                
+                addSetupLog("Initializing Proxy Core...");
+                await initScramjetCore(cachedWisp);
+
+                addSetupLog("Setup complete. Launching UI...");
+                
+                setTimeout(() => {
+                    const overlay = document.getElementById('setup-overlay');
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.remove(), 800);
+                }, 1000);
+
+            } catch (err) {
+                console.error(err);
+                addSetupLog("CRITICAL FAILURE: All servers blocked or unreachable.", true);
+                addSetupLog("Please check your network and refresh to try again.", true);
             }
-        });
+        }
 
         window.navBack = function() {
             if (!activeTabId || !scramjetFrames[activeTabId]) return;
@@ -314,12 +307,6 @@
 
         function saveBookmarks() {
             localStorage.setItem('savedBookmarks', JSON.stringify(Array.from(starredUrls)));
-        }
-
-        function saveSettings() {
-            localStorage.setItem('proxySettings', JSON.stringify({
-                wisp: document.getElementById('wisp-select').value
-            }));
         }
 
         function renderStarredGrid() {
@@ -368,123 +355,28 @@
             updateStarUI(tab.url);
             renderStarredGrid();
         });
-
-        async function getBestWisp() {
-            wispStatusEl.innerHTML = `<i data-lucide="loader-2" size="16" class="spinning" style="display:inline-block; transform-origin: center;"></i><span>Pinging servers...</span>`;
-            lucide.createIcons();
-            
-            const pingPromises = WISP_URLS.map(url => {
-                return new Promise((resolve, reject) => {
-                    let ws;
-                    try { ws = new WebSocket(url); } catch (e) { return reject(e); }
-                    
-                    const timeoutId = setTimeout(() => {
-                        if (ws.readyState !== WebSocket.OPEN) {
-                            ws.close();
-                            reject(new Error("Timeout"));
-                        }
-                    }, 2500);
-
-                    ws.onopen = () => {
-                        clearTimeout(timeoutId);
-                        ws.close();
-                        resolve(url);
-                    };
-                    
-                    ws.onerror = (err) => {
-                        clearTimeout(timeoutId);
-                        reject(err);
-                    };
-                });
-            });
-
-            try { return await Promise.any(pingPromises); } 
-            catch (error) { return WISP_URLS[0]; }
-        }
         
         async function initScramjetCore(wispUrl) {
             if (scramjetController && currentScramjetWisp === wispUrl) return; 
             if (typeof window.$scramjetController === 'undefined') {
-                console.error("Scramjet controller script not loaded.");
-                return;
+                throw new Error("Scramjet controller script not loaded.");
             }
-            try {
-                const { Controller } = window.$scramjetController;
-                const { defaultConfig } = window.$scramjet;
-                const EpoxyTransport = self.EpoxyTransport?.default || window.EpoxyTransport;
-                
-                const registration = await navigator.serviceWorker.ready;
-                const serviceworker = navigator.serviceWorker.controller || registration.active;
-                if (!serviceworker) throw new Error("No active service worker found for Scramjet.");
-                
-                const transport = new EpoxyTransport({ wisp: wispUrl });
-                await transport.init();
-                
-                scramjetController = new Controller({ serviceworker, transport, scramjetConfig: defaultConfig });
-                await scramjetController.wait();
-                currentScramjetWisp = wispUrl;
-                scramjetFrames = {};
-            } catch (err) {
-                console.error("Failed to initialize Scramjet:", err);
-                scramjetController = null;
-                currentScramjetWisp = null;
-                throw err;
-            }
+            const { Controller } = window.$scramjetController;
+            const { defaultConfig } = window.$scramjet;
+            const EpoxyTransport = self.EpoxyTransport?.default || window.EpoxyTransport;
+            
+            const registration = await navigator.serviceWorker.ready;
+            const serviceworker = navigator.serviceWorker.controller || registration.active;
+            if (!serviceworker) throw new Error("No active service worker found.");
+            
+            const transport = new EpoxyTransport({ wisp: wispUrl });
+            await transport.init();
+            
+            scramjetController = new Controller({ serviceworker, transport, scramjetConfig: defaultConfig });
+            await scramjetController.wait();
+            currentScramjetWisp = wispUrl;
+            scramjetFrames = {};
         }
-
-        async function setupWisp(targetWisp) {
-            try {
-                if (typeof registerSW !== 'undefined') {
-                    if (!swReady) swReady = registerSW();
-                    await swReady;
-                }
-                cachedWisp = targetWisp === 'auto' ? await getBestWisp() : targetWisp;
-                await initScramjetCore(cachedWisp);
-                
-                let displayStatus = "";
-                try { displayStatus = `Connected to ${new URL(cachedWisp).hostname}`; } 
-                catch(e) { displayStatus = "Connected to Custom WISP"; }
-                
-                wispStatusEl.innerHTML = `<i data-lucide="check-circle" size="16"></i><span>${displayStatus}</span>`;
-                wispStatusEl.style.color = '#10b981';
-                wispStatusEl.style.borderColor = 'rgba(16, 185, 129, 0.2)';
-                wispStatusEl.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-                lucide.createIcons();
-            } catch (err) {
-                wispStatusEl.innerHTML = `<i data-lucide="alert-triangle" size="16"></i><span>Connection Error</span>`;
-                wispStatusEl.style.color = '#ef4444';
-                wispStatusEl.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-                wispStatusEl.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                lucide.createIcons();
-            }
-        }
-
-        function updateWispUIState() {
-            const wispSelect = document.getElementById('wisp-select');
-            wispSelect.disabled = false;
-            setupWisp(wispSelect.value);
-        }
-
-        document.getElementById('wisp-select').addEventListener('change', async (e) => {
-            saveSettings();
-            await setupWisp(e.target.value);
-        });
-
-        document.getElementById('add-wisp-btn').addEventListener('click', () => {
-            const newWisp = document.getElementById('custom-wisp-input').value.trim();
-            if (newWisp && (newWisp.startsWith('wss://') || newWisp.startsWith('ws://'))) {
-                const select = document.getElementById('wisp-select');
-                const opt = document.createElement('option');
-                opt.value = newWisp;
-                try { opt.textContent = new URL(newWisp).hostname; } catch(e) { opt.textContent = "Custom WISP"; }
-                select.appendChild(opt);
-                select.value = newWisp;
-                
-                saveSettings();
-                setupWisp(newWisp);
-                document.getElementById('custom-wisp-input').value = '';
-            }
-        });
 
         function searchUrl(input) {
             if (input === '/home') return input;
@@ -529,8 +421,6 @@
 
                 try {
                     const loc = iframe.contentWindow.location;
-                    
-                    // Prevent onload from trying to parse the actual home.html
                     if (loc.pathname.endsWith('home.html') || loc.href === 'about:blank') {
                         return;
                     }
@@ -568,10 +458,8 @@
             const targetUrl = searchUrl(rawUrl);
             
             if (rawUrl !== '/home') {
-                if (!cachedWisp) await setupWisp(document.getElementById('wisp-select').value);
-                
                 try {
-                    if (!scramjetController || currentScramjetWisp !== cachedWisp) {
+                    if (!scramjetController) {
                         await initScramjetCore(cachedWisp);
                     }
                     if (!scramjetFrames[tabId] && scramjetController) {
@@ -583,9 +471,7 @@
                 } catch (e) {
                     loadingSpinner.style.display = 'none';
                     iframe.classList.remove('loading');
-                    wispStatusEl.innerHTML = `<i data-lucide="alert-triangle" size="16"></i><span>WISP Connection Failed</span>`;
-                    wispStatusEl.style.color = '#ef4444';
-                    lucide.createIcons();
+                    console.error("Frame routing failed", e);
                 }
             } else {
                 iframe.removeAttribute('srcdoc'); 
@@ -691,9 +577,11 @@
             }
         });
 
-        updateWispUIState();
         renderStarredGrid();
         addNewTab("/home", "Home");
+        
+        // Start setup sequence on load
+        runInitialSetup();
     </script>
 </body>
 </html>
