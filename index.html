@@ -113,54 +113,64 @@
         iframe.active { display: block; }
         iframe.loading { filter: blur(12px); opacity: 0.4; }
 
-        /* Premium Settings UI */
+        /* Enhanced Settings UI */
         .settings-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center;
             z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
         .settings-overlay.active { opacity: 1; pointer-events: auto; }
+        
         .settings-modal { 
-            background-color: #0c0c0e; border: 1px solid #27272a; border-radius: 16px; 
-            width: 380px; padding: 24px; box-shadow: 0 24px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); 
-            transform: translateY(15px) scale(0.98); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #27272a; 
+            border-radius: 16px; width: 420px; padding: 32px; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05); 
+            transform: translateY(20px) scale(0.95); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative; overflow: hidden;
+        }
+        .settings-modal::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
         }
         .settings-overlay.active .settings-modal { transform: translateY(0) scale(1); }
+        
         .settings-header { 
             display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 24px; font-size: 18px; font-weight: 600; 
-            color: #ffffff; border-bottom: 1px solid #1f1f22; padding-bottom: 16px;
+            margin-bottom: 28px; font-size: 22px; font-weight: 700; color: #ffffff;
         }
-        .settings-header .icon-btn { margin-right: -8px; }
+        .settings-header .icon-btn { margin-right: -8px; background: rgba(255,255,255,0.05); }
+        .settings-header .icon-btn:hover { background: rgba(239, 68, 68, 0.9); color: white; }
 
-        .proxy-manager { display: flex; flex-direction: column; gap: 16px; }
+        .proxy-manager { display: flex; flex-direction: column; gap: 20px; }
         .proxy-row { display: flex; flex-direction: column; gap: 8px; }
-        .proxy-row > span { font-size: 13px; font-weight: 500; color: #e4e4e7; }
+        .proxy-row > span { font-size: 14px; font-weight: 600; color: #e4e4e7; }
+        
         .proxy-row select, .proxy-row input {
-            background: #18181b; color: #ffffff; border: 1px solid #3f3f46; 
-            border-radius: 8px; padding: 10px 12px; font-size: 13px; outline: none; 
-            transition: all 0.2s ease; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            background: #09090b; color: #ffffff; border: 1px solid #3f3f46; 
+            border-radius: 10px; padding: 12px 14px; font-size: 14px; outline: none; 
+            transition: all 0.2s ease; width: 100%;
             appearance: none; -webkit-appearance: none;
         }
-        .proxy-row select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+        .proxy-row select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
         .proxy-row select:hover, .proxy-row input:focus { 
-            border-color: #6366f1; 
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 0 0 3px rgba(99, 102, 241, 0.15);
+            border-color: #a855f7; 
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
         }
-        .proxy-row select:disabled { opacity: 0.5; cursor: not-allowed; border-color: #3f3f46; }
 
-        .input-group { display: flex; gap: 8px; }
+        .input-group { display: flex; gap: 10px; }
         .input-group input { flex-grow: 1; }
         .input-group button { 
-            background: #6366f1; color: white; border: none; border-radius: 8px; 
-            padding: 0 16px; font-weight: 500; font-size: 13px; cursor: pointer; transition: background 0.2s;
+            background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; 
+            border: none; border-radius: 10px; padding: 0 20px; font-weight: 600; 
+            font-size: 14px; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;
         }
-        .input-group button:hover { background: #4f46e5; }
+        .input-group button:hover { box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transform: translateY(-1px); }
+        .input-group button:active { transform: translateY(1px); }
 
         .wisp-status {
-            font-size: 13px; color: #10b981; margin-top: 8px; padding: 12px; 
-            background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);
-            display: flex; align-items: center; gap: 8px; font-weight: 500;
+            font-size: 14px; color: #10b981; margin-top: 4px; padding: 14px; 
+            background: rgba(16, 185, 129, 0.1); border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.2);
+            display: flex; align-items: center; gap: 10px; font-weight: 500;
         }
     </style>
 </head>
@@ -366,11 +376,7 @@
             const pingPromises = WISP_URLS.map(url => {
                 return new Promise((resolve, reject) => {
                     let ws;
-                    try {
-                        ws = new WebSocket(url);
-                    } catch (e) {
-                        return reject(e);
-                    }
+                    try { ws = new WebSocket(url); } catch (e) { return reject(e); }
                     
                     const timeoutId = setTimeout(() => {
                         if (ws.readyState !== WebSocket.OPEN) {
@@ -392,22 +398,16 @@
                 });
             });
 
-            try {
-                const fastestUrl = await Promise.any(pingPromises);
-                return fastestUrl;
-            } catch (error) {
-                return WISP_URLS[0];
-            }
+            try { return await Promise.any(pingPromises); } 
+            catch (error) { return WISP_URLS[0]; }
         }
         
         async function initScramjetCore(wispUrl) {
             if (scramjetController && currentScramjetWisp === wispUrl) return; 
-            
             if (typeof window.$scramjetController === 'undefined') {
                 console.error("Scramjet controller script not loaded.");
                 return;
             }
-            
             try {
                 const { Controller } = window.$scramjetController;
                 const { defaultConfig } = window.$scramjet;
@@ -415,23 +415,14 @@
                 
                 const registration = await navigator.serviceWorker.ready;
                 const serviceworker = navigator.serviceWorker.controller || registration.active;
-                
-                if (!serviceworker) {
-                    throw new Error("No active service worker found for Scramjet.");
-                }
+                if (!serviceworker) throw new Error("No active service worker found for Scramjet.");
                 
                 const transport = new EpoxyTransport({ wisp: wispUrl });
                 await transport.init();
                 
-                scramjetController = new Controller({
-                    serviceworker,
-                    transport,
-                    scramjetConfig: defaultConfig
-                });
-                
+                scramjetController = new Controller({ serviceworker, transport, scramjetConfig: defaultConfig });
                 await scramjetController.wait();
                 currentScramjetWisp = wispUrl;
-                
                 scramjetFrames = {};
             } catch (err) {
                 console.error("Failed to initialize Scramjet:", err);
@@ -451,11 +442,8 @@
                 await initScramjetCore(cachedWisp);
                 
                 let displayStatus = "";
-                try { 
-                    displayStatus = `Connected to ${new URL(cachedWisp).hostname}`; 
-                } catch(e) { 
-                    displayStatus = "Connected to Custom WISP"; 
-                }
+                try { displayStatus = `Connected to ${new URL(cachedWisp).hostname}`; } 
+                catch(e) { displayStatus = "Connected to Custom WISP"; }
                 
                 wispStatusEl.innerHTML = `<i data-lucide="check-circle" size="16"></i><span>${displayStatus}</span>`;
                 wispStatusEl.style.color = '#10b981';
@@ -533,9 +521,7 @@
             if (!iframe) return;
 
             iframe.classList.add('loading');
-            if (tabId === activeTabId) {
-                loadingSpinner.style.display = 'flex';
-            }
+            if (tabId === activeTabId) loadingSpinner.style.display = 'flex';
 
             iframe.onload = () => {
                 iframe.classList.remove('loading');
@@ -543,6 +529,12 @@
 
                 try {
                     const loc = iframe.contentWindow.location;
+                    
+                    // Prevent onload from trying to parse the actual home.html
+                    if (loc.pathname.endsWith('home.html') || loc.href === 'about:blank') {
+                        return;
+                    }
+
                     const path = loc.pathname + loc.search + loc.hash;
                     let realUrl = "";
 
@@ -569,28 +561,22 @@
                             updateStarUI(realUrl);
                         }
                     }
-                } catch(e) {
-                    // Cross-origin restriction fallback silently
-                }
+                } catch(e) {}
             };
 
             updateTabIcon(tabId, rawUrl);
             const targetUrl = searchUrl(rawUrl);
             
             if (rawUrl !== '/home') {
-                if (!cachedWisp) {
-                    await setupWisp(document.getElementById('wisp-select').value);
-                }
+                if (!cachedWisp) await setupWisp(document.getElementById('wisp-select').value);
                 
                 try {
                     if (!scramjetController || currentScramjetWisp !== cachedWisp) {
                         await initScramjetCore(cachedWisp);
                     }
-                    
                     if (!scramjetFrames[tabId] && scramjetController) {
                         scramjetFrames[tabId] = scramjetController.createFrame(iframe);
                     }
-                    
                     if (scramjetFrames[tabId]) {
                         scramjetFrames[tabId].go(targetUrl);
                     }
@@ -602,7 +588,12 @@
                     lucide.createIcons();
                 }
             } else {
-                iframe.src = 'about:blank';
+                iframe.removeAttribute('srcdoc'); 
+                iframe.src = 'home.html';
+                
+                const titleEl = document.getElementById(`title-${tabId}`);
+                if (titleEl) titleEl.innerText = "Home";
+                
                 iframe.classList.remove('loading');
                 if (tabId === activeTabId) loadingSpinner.style.display = 'none';
             }
@@ -632,7 +623,6 @@
 
             lucide.createIcons();
             switchTab(id);
-
             await loadUrlInTab(id, initialUrl);
         };
 
@@ -667,17 +657,11 @@
             const frame = document.getElementById(`frame-${id}`);
             if (tabBtn) tabBtn.remove();
             if (frame) frame.remove();
-            
-            if (scramjetFrames[id]) {
-                delete scramjetFrames[id];
-            }
+            if (scramjetFrames[id]) delete scramjetFrames[id];
 
             tabs = tabs.filter(t => t.id !== id);
-            if (tabs.length === 0) {
-                addNewTab("/home", "Home");
-            } else if (activeTabId === id) {
-                switchTab(tabs[tabs.length - 1].id);
-            }
+            if (tabs.length === 0) addNewTab("/home", "Home");
+            else if (activeTabId === id) switchTab(tabs[tabs.length - 1].id);
         };
 
         window.loadShortcut = async function(url, title) {
@@ -707,7 +691,6 @@
             }
         });
 
-        // Startup Initialization
         updateWispUIState();
         renderStarredGrid();
         addNewTab("/home", "Home");
