@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Browser</title>
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- UV Imports -->
-    <script src="/active/uv/uv.bundle.js" defer></script>
-    <script src="/active/uv/uv.config.js" defer></script>
     
     <!-- Scramjet Required Global Imports -->
     <script src="/scramjet/scramjet.js"></script>
@@ -42,10 +38,7 @@
             overflow-x: hidden;
         }
 
-        .sidebar.collapsed {
-            width: 60px;
-            padding: 12px 6px;
-        }
+        .sidebar.collapsed { width: 60px; padding: 12px 6px; }
 
         .sidebar-header-controls { 
             display: flex; align-items: center; justify-content: space-between; 
@@ -215,13 +208,6 @@
             </div>
             <div class="proxy-manager">
                 <div class="proxy-row">
-                    <span>Engine</span>
-                    <select id="engine-select">
-                        <option value="uv">Ultraviolet</option>
-                        <option value="scramjet">Scramjet</option>
-                    </select>
-                </div>
-                <div class="proxy-row">
                     <span>WISP Server</span>
                     <select id="wisp-select">
                         <option value="auto">Auto-Select Fastest</option>
@@ -247,16 +233,8 @@
 
     <script type="module">
         import { registerSW } from "/active/prxy/register-sw.mjs";
-        import * as BareMux from "/active/prxy/baremux/index.mjs";
 
         lucide.createIcons();
-
-        let connection;
-        try {
-            connection = new BareMux.BareMuxConnection("/active/prxy/baremux/worker.js");
-        } catch (e) {
-            console.log("BareMux worker initialization skipped or missing.");
-        }
 
         const WISP_URLS = [
             "wss://onyxv1.ai.studio/wisp/",
@@ -277,8 +255,7 @@
         let savedBookmarks = JSON.parse(localStorage.getItem('savedBookmarks')) || ["https://open.spotify.com", "https://instagram.com"];
         let starredUrls = new Set(savedBookmarks);
         
-        const proxySettings = JSON.parse(localStorage.getItem('proxySettings')) || { engine: 'uv', wisp: 'auto' };
-        document.getElementById('engine-select').value = proxySettings.engine;
+        const proxySettings = JSON.parse(localStorage.getItem('proxySettings')) || { wisp: 'auto' };
         
         if (proxySettings.wisp !== 'auto' && !WISP_URLS.includes(proxySettings.wisp)) {
             const select = document.getElementById('wisp-select');
@@ -287,7 +264,7 @@
             try { opt.textContent = new URL(proxySettings.wisp).hostname; } catch(e) { opt.textContent = "Custom WISP"; }
             select.appendChild(opt);
         }
-        document.getElementById('wisp-select').value = proxySettings.wisp;
+        document.getElementById('wisp-select').value = proxySettings.wisp || 'auto';
 
         const wispStatusEl = document.getElementById('wisp-status');
         const urlInput = document.getElementById('url-input');
@@ -311,36 +288,18 @@
         });
 
         window.navBack = function() {
-            if (!activeTabId) return;
-            const engine = document.getElementById('engine-select').value;
-            if (engine === 'scramjet' && scramjetFrames[activeTabId]) {
-                try { scramjetFrames[activeTabId].back(); } catch(e){}
-            } else {
-                const iframe = document.getElementById(`frame-${activeTabId}`);
-                try { iframe.contentWindow.history.back(); } catch (e) {}
-            }
+            if (!activeTabId || !scramjetFrames[activeTabId]) return;
+            try { scramjetFrames[activeTabId].back(); } catch(e){}
         };
         
         window.navForward = function() {
-            if (!activeTabId) return;
-            const engine = document.getElementById('engine-select').value;
-            if (engine === 'scramjet' && scramjetFrames[activeTabId]) {
-                try { scramjetFrames[activeTabId].forward(); } catch(e){}
-            } else {
-                const iframe = document.getElementById(`frame-${activeTabId}`);
-                try { iframe.contentWindow.history.forward(); } catch (e) {}
-            }
+            if (!activeTabId || !scramjetFrames[activeTabId]) return;
+            try { scramjetFrames[activeTabId].forward(); } catch(e){}
         };
         
         window.reloadActiveTab = function() {
-            if (!activeTabId) return;
-            const engine = document.getElementById('engine-select').value;
-            if (engine === 'scramjet' && scramjetFrames[activeTabId]) {
-                try { scramjetFrames[activeTabId].reload(); } catch(e){}
-            } else {
-                const tab = tabs.find(t => t.id === activeTabId);
-                if (tab) loadUrlInTab(activeTabId, tab.url);
-            }
+            if (!activeTabId || !scramjetFrames[activeTabId]) return;
+            try { scramjetFrames[activeTabId].reload(); } catch(e){}
         };
 
         function saveBookmarks() {
@@ -349,7 +308,6 @@
 
         function saveSettings() {
             localStorage.setItem('proxySettings', JSON.stringify({
-                engine: document.getElementById('engine-select').value,
                 wisp: document.getElementById('wisp-select').value
             }));
         }
@@ -438,7 +396,6 @@
                 const fastestUrl = await Promise.any(pingPromises);
                 return fastestUrl;
             } catch (error) {
-                // Fallback to first if all fail to let setupWisp handle specific error display
                 return WISP_URLS[0];
             }
         }
@@ -491,13 +448,7 @@
                     await swReady;
                 }
                 cachedWisp = targetWisp === 'auto' ? await getBestWisp() : targetWisp;
-                const engine = document.getElementById('engine-select').value;
-                
-                if (engine === 'uv' && connection) {
-                    await connection.setTransport("/active/prxy/libcurl/libcurl.mjs", [{ wisp: cachedWisp }]);
-                } else if (engine === 'scramjet') {
-                    await initScramjetCore(cachedWisp);
-                }
+                await initScramjetCore(cachedWisp);
                 
                 let displayStatus = "";
                 try { 
@@ -525,11 +476,6 @@
             wispSelect.disabled = false;
             setupWisp(wispSelect.value);
         }
-
-        document.getElementById('engine-select').addEventListener('change', () => {
-            saveSettings();
-            updateWispUIState();
-        });
 
         document.getElementById('wisp-select').addEventListener('change', async (e) => {
             saveSettings();
@@ -561,20 +507,6 @@
             } catch (e) {}
             return "https://www.google.com/search?q=" + encodeURIComponent(input);
         }
-
-        window.__getProxiedUrl = async function(rawUrl) {
-            if (rawUrl === '/home') return rawUrl;
-            const targetUrl = searchUrl(rawUrl);
-
-            if (!cachedWisp) {
-                await setupWisp(document.getElementById('wisp-select').value);
-            }
-
-            if (typeof __uv$config !== 'undefined') {
-                return __uv$config.prefix + __uv$config.encodeUrl(targetUrl);
-            }
-            return targetUrl;
-        };
 
         function updateTabIcon(tabId, rawUrl) {
             const iconEl = document.querySelector(`#tab-btn-${tabId} .tab-icon`);
@@ -612,12 +544,9 @@
                 try {
                     const loc = iframe.contentWindow.location;
                     const path = loc.pathname + loc.search + loc.hash;
-                    const engine = document.getElementById('engine-select').value;
                     let realUrl = "";
 
-                    if (engine === 'uv' && typeof __uv$config !== 'undefined' && path.startsWith(__uv$config.prefix)) {
-                        realUrl = __uv$config.decodeUrl(path.substring(__uv$config.prefix.length));
-                    } else if (engine === 'scramjet' && typeof __scramjet$config !== 'undefined' && path.startsWith(__scramjet$config.prefix)) {
+                    if (typeof __scramjet$config !== 'undefined' && path.startsWith(__scramjet$config.prefix)) {
                         realUrl = __scramjet$config.decodeUrl(path.substring(__scramjet$config.prefix.length));
                     }
 
@@ -646,10 +575,9 @@
             };
 
             updateTabIcon(tabId, rawUrl);
-            const engine = document.getElementById('engine-select').value;
             const targetUrl = searchUrl(rawUrl);
             
-            if (engine === 'scramjet' && rawUrl !== '/home') {
+            if (rawUrl !== '/home') {
                 if (!cachedWisp) {
                     await setupWisp(document.getElementById('wisp-select').value);
                 }
@@ -674,8 +602,9 @@
                     lucide.createIcons();
                 }
             } else {
-                const proxiedUrl = await window.__getProxiedUrl(rawUrl);
-                iframe.src = proxiedUrl;
+                iframe.src = 'about:blank';
+                iframe.classList.remove('loading');
+                if (tabId === activeTabId) loadingSpinner.style.display = 'none';
             }
         }
 
